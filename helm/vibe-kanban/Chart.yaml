@@ -1,7 +1,7 @@
 apiVersion: v2
 name: vibe-kanban
 description: >
-  Production-ready Helm chart for Vibe Kanban Cloud — a collaborative kanban
+  Helm chart for Vibe Kanban Cloud — a collaborative kanban
   platform backed by a Rust API server, ElectricSQL real-time sync, and PostgreSQL.
   Includes optional relay/tunnel server support and worker server support.
 
