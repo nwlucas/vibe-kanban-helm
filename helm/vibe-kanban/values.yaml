@@ -155,7 +155,7 @@ electric:
 server:
   image:
     repository: your-registry/vibe-kanban
-    tag: "remote-v0.1.24"
+    tag: "remote-v0.1.25"
     pullPolicy: Always
 
   replicaCount: 1
@@ -200,7 +200,7 @@ relay:
   enabled: true
   image:
     repository: your-registry/vibe-kanban
-    tag: "remote-v0.1.24"
+    tag: "relay-v0.1.6"
     pullPolicy: Always
 
   replicaCount: 1

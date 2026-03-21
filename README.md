@@ -61,6 +61,23 @@ If you run the remote server on a **private IP** (e.g. `10.x.x.x`, `172.16.x.x`,
 
 ## Helm Chart
 
+### Install from Helm Repository
+
+The chart is published automatically to GitHub Pages whenever the chart version is bumped on `main`.
+
+```bash
+helm repo add vibe-kanban https://everythings-gonna-be-alright.github.io/vibe-kanban-helm
+helm repo update
+helm search repo vibe-kanban
+helm install vibe-kanban vibe-kanban/vibe-kanban --namespace vibe-kanban --create-namespace \
+  --set server.image.repository=harbor.example.com/myproject/vibe-kanban \
+  --set server.image.tag=remote-v0.1.25 \
+  --set relay.image.repository=harbor.example.com/myproject/vibe-kanban \
+  --set relay.image.tag=relay-v0.1.6 \
+  --set worker.image.repository=harbor.example.com/myproject/vibe-kanban \
+  --set worker.image.tag=worker-v0.1.33 
+```
+
 ### Prerequisites
 
 - Kubernetes 1.26+
@@ -116,11 +133,12 @@ When using Option B with empty values, the chart auto-generates secure random se
 
 #### Optional Secret Keys
 
-| Key                                                     | Description                       |
-|---------------------------------------------------------|-----------------------------------|
-| `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` | GitHub OAuth app credentials      |
-| `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth app credentials      |
-| `LOOPS_EMAIL_API_KEY`                                   | Loops transactional email API key |
+| Key                                                                                               | Description                                                    |
+|---------------------------------------------------------------------------------------------------|----------------------------------------------------------------|
+| `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET`                                           | GitHub OAuth app credentials                                   |
+| `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`                                           | Google OAuth app credentials                                   |
+| `LOOPS_EMAIL_API_KEY`                                                                             | Loops transactional email API key                              |
+| `LOOPS_INVITE_TEMPLATE_ID` / `LOOPS_REVIEW_READY_TEMPLATE_ID` / `LOOPS_REVIEW_FAILED_TEMPLATE_ID` | Loops transactional email template IDs                         |
 
 ### Ingress Configuration
 

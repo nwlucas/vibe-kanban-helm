@@ -9,6 +9,8 @@ metadata:
     app.kubernetes.io/component: worker
 spec:
   replicas: {{ .Values.worker.replicaCount }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       {{- include "vibe-kanban.worker.selectorLabels" . | nindent 6 }}
