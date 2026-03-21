@@ -27,6 +27,8 @@ docker build \
 
 docker push ${DOCKER_REGISTRY}/vibe-kanban:${REMOTE_SERVER_TAG}
 
+git checkout ${RELAY_SERVER_TAG}
+
 # Build relay image
 docker build \
   -t ${DOCKER_REGISTRY}/vibe-kanban:${RELAY_SERVER_TAG} \

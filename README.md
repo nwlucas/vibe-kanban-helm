@@ -14,94 +14,38 @@ Based on the official [Vibe Kanban deploy-docker guide](https://vibekanban.com/d
 | **Relay**       | Optional tunnel/relay server for NAT traversal and desktop-client connectivity  | 8082         |
 | **Worker**      | Coding-agent runner / desktop-client daemon (Node.js, includes Claude Code CLI) | 3000         |
 
-## Building Docker Images
-
-The helper script `build-docker-images.sh` clones the upstream [BloopAI/vibe-kanban](https://github.com/BloopAI/vibe-kanban) repository and builds three images. Run it from the repo root:
-
-```bash
-./build-docker-images.sh
-```
-
-You will be prompted for:
-
-| Prompt                    | Default                         | Notes                                                           |
-|---------------------------|---------------------------------|-----------------------------------------------------------------|
-| `REMOTE_SERVER_TAG`       | `remote-v0.1.24`                | Git tag to checkout; used as the server image tag               |
-| `WORKER_TAG`              | `v0.1.33`                       | npm package version for `vibe-kanban` worker                    |
-| `DOCKER_REGISTRY`         | `your-registry`                 | Container registry prefix (e.g. `harbor.example.com/myproject`) |
-| `VITE_RELAY_API_BASE_URL` | `https://relay.your-domain.com` | **Build-time** argument baked into the Vite frontend bundle     |
-
-### Images produced
-
-| Image                                                     | Dockerfile                                  | Purpose                            |
-|-----------------------------------------------------------|---------------------------------------------|------------------------------------|
-| `<DOCKER_REGISTRY>/vibe-kanban:<REMOTE_SERVER_TAG>`       | `crates/remote/Dockerfile` (upstream)       | Server — Rust API + Vite SPA       |
-| `<DOCKER_REGISTRY>/vibe-kanban:relay-<REMOTE_SERVER_TAG>` | `crates/relay-tunnel/Dockerfile` (upstream) | Relay / tunnel server              |
-| `<DOCKER_REGISTRY>/vibe-kanban:worker-<WORKER_TAG>`       | `Dockerfile-worker` (this repo)             | Worker — Node.js + Claude Code CLI |
-
-> **Important:** `VITE_RELAY_API_BASE_URL` is a **build-time** variable. It is embedded into the compiled frontend assets during `docker build`. Changing the relay URL requires rebuilding the server image.
-
-### Worker Image Details
-
-The worker image (`Dockerfile-worker`) is based on `node:24-alpine` and installs:
-
-- **git** — for worktree operations in workspaces
-- **@anthropic-ai/claude-code** — Claude Code CLI (globally installed)
-- **vibe-kanban** — the worker npm package at the specified version
-
-The container runs as the non-root `node` user.
-
-## Known Issues
+## 🐞 Known Issues
 
 ### CORS Failure When Remote Server Uses a Private IP
 
-If you run the remote server on a **private IP** (e.g. `10.x.x.x`, `172.16.x.x`, `192.168.x.x`) and attempt to connect a worker or browser client from a **public IP**, the connection will fail with CORS errors. The client-side code constructs requests without `Origin` headers, so the server does not include CORS headers in its responses. The browser then blocks responses from a private network to a public address — this is enforced by the browser's [Private Network Access](https://chromestatus.com/feature/5152728072060928) policy.
+> [!IMPORTANT]
+> If you run the remote server on a **private IP** (e.g. `10.x.x.x`, `172.16.x.x`, `192.168.x.x`) and attempt to connect a worker or browser client from a **public IP**, the connection will fail with CORS errors. The client-side code constructs requests without `Origin` headers, so the server does not include CORS headers in its responses. The browser then blocks responses from a private network to a public address — this is enforced by the browser's [Private Network Access](https://chromestatus.com/feature/5152728072060928) policy.
 
-**Workaround:** Bind the remote server to ingress with a **public IP**. You can use allowlist to restrict access to the remote server from only your network.
+  **Workaround:** Bind the remote server to ingress with a **public IP**. You can use allowlist to restrict access to the remote server from only your network.
+
+### Relay base URL
+
+> [!WARNING]
+> If you plan to use relay, you must build your own server image with the VITE_RELAY_API_BASE_URL build-arg. Check the instructions below.
 
 ## Helm Chart
 
-### Install from Helm Repository
+### Install from OCI Registry (GHCR)
 
-The chart is published automatically to GitHub Pages whenever the chart version is bumped on `main`.
+The chart is also published as an OCI artifact to GitHub Container Registry:
 
 ```bash
-helm repo add vibe-kanban https://everythings-gonna-be-alright.github.io/vibe-kanban-helm
-helm repo update
-helm search repo vibe-kanban
-helm install vibe-kanban vibe-kanban/vibe-kanban --namespace vibe-kanban --create-namespace \
-  --set server.image.repository=harbor.example.com/myproject/vibe-kanban \
-  --set server.image.tag=remote-v0.1.25 \
-  --set relay.image.repository=harbor.example.com/myproject/vibe-kanban \
-  --set relay.image.tag=relay-v0.1.6 \
-  --set worker.image.repository=harbor.example.com/myproject/vibe-kanban \
-  --set worker.image.tag=worker-v0.1.33 
+helm install vibe-kanban oci://ghcr.io/everythings-gonna-be-alright/charts/vibe-kanban \
+  --namespace vibe-kanban --create-namespace
 ```
 
 ### Prerequisites
 
 - Kubernetes 1.26+
 - Helm 3.12+
-- A container registry with the built images
+- A container registry with the built images if you want to use relay
 - (Optional) cert-manager for automated TLS
 - (Optional) ingress-nginx controller
-
-### Quick Start
-
-```bash
-helm install vibe-kanban ./helm/vibe-kanban \
-  --namespace vibe-kanban --create-namespace \
-  --set server.image.repository=harbor.example.com/myproject/vibe-kanban \
-  --set server.image.tag=remote-v0.1.24 \
-  --set relay.image.repository=harbor.example.com/myproject/vibe-kanban \
-  --set relay.image.tag=relay-remote-v0.1.24 \
-  --set worker.image.repository=harbor.example.com/myproject/vibe-kanban \
-  --set worker.image.tag=worker-v0.1.33 \
-  --set ingress.enabled=true \
-  --set ingress.host=kanban.example.com \
-  --set relay.ingress.enabled=true \
-  --set relay.ingress.host=relay.example.com
-```
 
 ### Secrets Management
 
@@ -125,18 +69,18 @@ When using Option B with empty values, the chart auto-generates secure random se
 
 #### Required Secret Keys
 
-| Key                            | Consumed By             | Description                           |
-|--------------------------------|-------------------------|---------------------------------------|
-| `VIBEKANBAN_REMOTE_JWT_SECRET` | server, worker, relay   | JWT signing secret                    |
-| `DB_PASSWORD`                  | postgres, server, relay | PostgreSQL application user password  |
-| `ELECTRIC_ROLE_PASSWORD`       | electric                | ElectricSQL replication role password |
+| Key                                                     | Description                           |
+|---------------------------------------------------------|---------------------------------------|
+| `VIBEKANBAN_REMOTE_JWT_SECRET`                          | JWT signing secret                    |
+| `DB_PASSWORD`                                           | PostgreSQL application user password  |
+| `ELECTRIC_ROLE_PASSWORD`                                | ElectricSQL replication role password |
+| `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` | GitHub OAuth app credentials          |
+| `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth app credentials          |
 
 #### Optional Secret Keys
 
 | Key                                                                                               | Description                                                    |
 |---------------------------------------------------------------------------------------------------|----------------------------------------------------------------|
-| `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET`                                           | GitHub OAuth app credentials                                   |
-| `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`                                           | Google OAuth app credentials                                   |
 | `LOOPS_EMAIL_API_KEY`                                                                             | Loops transactional email API key                              |
 | `LOOPS_INVITE_TEMPLATE_ID` / `LOOPS_REVIEW_READY_TEMPLATE_ID` / `LOOPS_REVIEW_FAILED_TEMPLATE_ID` | Loops transactional email template IDs                         |
 
@@ -236,3 +180,41 @@ All configurable values are documented inline in [`helm/vibe-kanban/values.yaml`
 | `ingress.*`             | Main server ingress (host, TLS, annotations)                     |
 | `networkPolicy.*`       | Network segmentation toggle                                      |
 | `podDisruptionBudget.*` | PDB for server availability                                      |
+
+## Building Docker Images
+
+The helper script `build-docker-images.sh` clones the upstream [BloopAI/vibe-kanban](https://github.com/BloopAI/vibe-kanban) repository and builds three images. Run it from the repo root:
+
+```bash
+./build-docker-images.sh
+```
+
+You will be prompted for:
+
+| Prompt                    | Default                         | Notes                                                           |
+|---------------------------|---------------------------------|-----------------------------------------------------------------|
+| `REMOTE_SERVER_TAG`       | `remote-v0.1.25`                | Git tag to checkout; used as the server image tag               |
+| `RELAY_SERVER_TAG`        | `relay-v0.1.6`                  | Git tag to checkout; used as the relay image tag                |
+| `WORKER_TAG`              | `v0.1.33`                       | npm package version for `vibe-kanban` worker                    |
+| `DOCKER_REGISTRY`         | `your-registry`                 | Container registry prefix (e.g. `harbor.example.com/myproject`) |
+| `VITE_RELAY_API_BASE_URL` | `https://relay.your-domain.com` | **Build-time** argument baked into the Vite frontend bundle     |
+
+### Images produced
+
+| Image                                                     | Dockerfile                                  | Purpose                            |
+|-----------------------------------------------------------|---------------------------------------------|------------------------------------|
+| `<DOCKER_REGISTRY>/vibe-kanban:<REMOTE_SERVER_TAG>`       | `crates/remote/Dockerfile` (upstream)       | Server — Rust API + Vite SPA       |
+| `<DOCKER_REGISTRY>/vibe-kanban:relay-<REMOTE_SERVER_TAG>` | `crates/relay-tunnel/Dockerfile` (upstream) | Relay / tunnel server              |
+| `<DOCKER_REGISTRY>/vibe-kanban:worker-<WORKER_TAG>`       | `Dockerfile-worker` (this repo)             | Worker — Node.js + Claude Code CLI |
+
+> **Important:** `VITE_RELAY_API_BASE_URL` is a **build-time** variable. It is embedded into the compiled frontend assets during `docker build`. Changing the relay URL requires rebuilding the server image.
+
+### Worker Image Details
+
+The worker image (`Dockerfile-worker`) is based on `node:24-alpine` and installs:
+
+- **git** — for worktree operations in workspaces
+- **@anthropic-ai/claude-code** — Claude Code CLI (globally installed)
+- **vibe-kanban** — the worker npm package at the specified version
+
+The container runs as the non-root `node` user.
