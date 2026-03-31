@@ -155,7 +155,7 @@ electric:
 server:
   image:
     repository: ghcr.io/everythings-gonna-be-alright/vibe-kanban
-    tag: "remote-v0.1.25"
+    tag: "remote-v0.1.26"
     pullPolicy: Always
 
   replicaCount: 1
@@ -200,7 +200,7 @@ relay:
   enabled: true
   image:
     repository: ghcr.io/everythings-gonna-be-alright/vibe-kanban
-    tag: "relay-v0.1.6"
+    tag: "relay-v0.1.7"
     pullPolicy: Always
 
   replicaCount: 1
@@ -257,7 +257,7 @@ worker:
   enabled: true
   image:
     repository: ghcr.io/everythings-gonna-be-alright/vibe-kanban
-    tag: "0.1.33"  # defaults to Chart.AppVersion
+    tag: "0.1.37" 
     pullPolicy: Always
 
   replicaCount: 1
@@ -328,6 +328,50 @@ worker:
       # Examples:
       # git clone https://github.com/org/repo /home/workspace/myrepo
       # git clone https://github.com/org/senior-repo /home/workspace/senior-repo
+
+  # Extra sidecar containers to run alongside the worker.
+  # Each entry follows the standard Kubernetes container spec.
+  # Example:
+  #   extraContainers:
+  #     - name: git-sync
+  #       image: alpine/git:2.43.0
+  #       securityContext:
+  #         runAsNonRoot: true
+  #         runAsUser: 1000
+  #         allowPrivilegeEscalation: false
+  #         capabilities:
+  #           drop: [ALL]
+  #         seccompProfile:
+  #           type: RuntimeDefault
+  #       command:
+  #         - sh
+  #         - -c
+  #         - |
+  #           while true; do
+  #             for repo in /home/node/*/; do
+  #               [ -d "$repo/.git" ] && git -C "$repo" pull --ff-only 2>/dev/null || true
+  #             done
+  #             sleep 300
+  #           done
+  #       volumeMounts:
+  #         - name: home-node
+  #           mountPath: /home/node
+  extraContainers: []
+
+  # Extra volumes available to the worker pod (consumed by sidecars or main container).
+  # Each entry follows the standard Kubernetes volume spec.
+  # Example:
+  #   extraVolumes:
+  #     - name: shared-logs
+  #       emptyDir: {}
+  extraVolumes: []
+
+  # Extra volume mounts added to the main worker container (e.g. shared with sidecars).
+  # Example:
+  #   extraVolumeMounts:
+  #     - name: shared-logs
+  #       mountPath: /var/log/worker
+  extraVolumeMounts: []
 
   ingress:
     enabled: false
