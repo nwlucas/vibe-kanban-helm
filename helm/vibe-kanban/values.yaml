@@ -155,7 +155,7 @@ electric:
 server:
   image:
     repository: ghcr.io/nwlucas/vibe-kanban
-    tag: "remote-v0.1.26"
+    tag: "remote-v0.1.27"
     pullPolicy: Always
 
   replicaCount: 1
