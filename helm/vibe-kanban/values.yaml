@@ -153,6 +153,9 @@ electric:
 # Pass VITE_RELAY_API_BASE_URL as a build-arg, not a runtime env var.
 # ---------------------------------------------------------------------------
 server:
+  # upstream_tag: BloopAI/vibe-kanban tag to clone source from (may differ from image tag
+  #   when rebuilding the same source with different build args)
+  upstream_tag: "remote-v0.1.26"
   image:
     repository: ghcr.io/nwlucas/vibe-kanban
     tag: "remote-v0.1.27"

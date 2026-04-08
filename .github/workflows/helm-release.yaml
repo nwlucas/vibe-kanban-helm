@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       server_tag: ${{ steps.tags.outputs.server_tag }}
+      server_upstream_tag: ${{ steps.tags.outputs.server_upstream_tag }}
       relay_tag: ${{ steps.tags.outputs.relay_tag }}
       worker_tag: ${{ steps.tags.outputs.worker_tag }}
       vite_relay_url: ${{ steps.tags.outputs.vite_relay_url }}
@@ -43,14 +44,17 @@ jobs:
           VALUES="helm/vibe-kanban/values.yaml"
 
           SERVER_TAG=$(yq '.server.image.tag' "$VALUES")
+          # upstream_tag is the BloopAI source tag to clone; falls back to server image tag
+          SERVER_UPSTREAM_TAG=$(yq '.server.upstream_tag // .server.image.tag' "$VALUES")
           RELAY_TAG=$(yq '.relay.image.tag' "$VALUES")
           WORKER_TAG=$(yq '.worker.image.tag' "$VALUES")
 
           # Workflow dispatch input takes precedence over the repository secret
           VITE_RELAY_URL="${INPUT_RELAY_URL:-$SECRET_RELAY_URL}"
 
-          echo "server_tag=${SERVER_TAG}" >> "$GITHUB_OUTPUT"
-          echo "relay_tag=${RELAY_TAG}"   >> "$GITHUB_OUTPUT"
+          echo "server_tag=${SERVER_TAG}"                   >> "$GITHUB_OUTPUT"
+          echo "server_upstream_tag=${SERVER_UPSTREAM_TAG}" >> "$GITHUB_OUTPUT"
+          echo "relay_tag=${RELAY_TAG}"                     >> "$GITHUB_OUTPUT"
           echo "worker_tag=${WORKER_TAG}" >> "$GITHUB_OUTPUT"
           echo "vite_relay_url=${VITE_RELAY_URL}" >> "$GITHUB_OUTPUT"
 
@@ -60,7 +64,7 @@ jobs:
     steps:
       - name: Clone upstream vibe-kanban
         run: |
-          git clone --branch "${{ needs.resolve-tags.outputs.server_tag }}" --depth 1 \
+          git clone --branch "${{ needs.resolve-tags.outputs.server_upstream_tag }}" --depth 1 \
             https://github.com/BloopAI/vibe-kanban.git /tmp/vibe-kanban
 
       - name: Log in to GHCR
