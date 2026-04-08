@@ -10,6 +10,10 @@ on:
         description: "Override VITE_RELAY_API_BASE_URL (leave empty to use repository secret)"
         required: false
         default: ""
+      platforms:
+        description: "Docker build platforms (e.g. linux/arm64 for faster builds on ai-hub)"
+        required: false
+        default: "linux/arm64"
 
 permissions:
   contents: read
@@ -77,7 +81,7 @@ jobs:
         with:
           context: /tmp/vibe-kanban
           file: /tmp/vibe-kanban/crates/remote/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ inputs.platforms || 'linux/arm64' }}
           push: true
           build-args: |
             VITE_RELAY_API_BASE_URL=${{ inputs.vite_relay_url || secrets.VITE_RELAY_API_BASE_URL }}
@@ -112,7 +116,7 @@ jobs:
         with:
           context: /tmp/vibe-kanban
           file: /tmp/vibe-kanban/crates/relay-tunnel/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ inputs.platforms || 'linux/arm64' }}
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.resolve-tags.outputs.relay_tag }}
@@ -143,7 +147,7 @@ jobs:
         with:
           context: .
           file: Dockerfile-worker
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ inputs.platforms || 'linux/arm64' }}
           push: true
           build-args: |
             WORKER_TAG=${{ needs.resolve-tags.outputs.worker_tag }}
