@@ -154,7 +154,7 @@ electric:
 # ---------------------------------------------------------------------------
 server:
   image:
-    repository: ghcr.io/everythings-gonna-be-alright/vibe-kanban
+    repository: ghcr.io/nwlucas/vibe-kanban
     tag: "remote-v0.1.26"
     pullPolicy: Always
 
@@ -199,7 +199,7 @@ server:
 relay:
   enabled: true
   image:
-    repository: ghcr.io/everythings-gonna-be-alright/vibe-kanban
+    repository: ghcr.io/nwlucas/vibe-kanban
     tag: "relay-v0.1.7"
     pullPolicy: Always
 
@@ -256,8 +256,8 @@ relay:
 worker:
   enabled: true
   image:
-    repository: ghcr.io/everythings-gonna-be-alright/vibe-kanban
-    tag: "0.1.37" 
+    repository: ghcr.io/nwlucas/vibe-kanban
+    tag: "0.1.37"
     pullPolicy: Always
 
   replicaCount: 1
