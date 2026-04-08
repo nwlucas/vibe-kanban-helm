@@ -27,7 +27,6 @@ jobs:
       server_upstream_tag: ${{ steps.tags.outputs.server_upstream_tag }}
       relay_tag: ${{ steps.tags.outputs.relay_tag }}
       worker_tag: ${{ steps.tags.outputs.worker_tag }}
-      vite_relay_url: ${{ steps.tags.outputs.vite_relay_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,9 +36,6 @@ jobs:
 
       - name: Read tags from values.yaml
         id: tags
-        env:
-          SECRET_RELAY_URL: ${{ secrets.VITE_RELAY_API_BASE_URL }}
-          INPUT_RELAY_URL: ${{ inputs.vite_relay_url }}
         run: |
           VALUES="helm/vibe-kanban/values.yaml"
 
@@ -49,14 +45,10 @@ jobs:
           RELAY_TAG=$(yq '.relay.image.tag' "$VALUES")
           WORKER_TAG=$(yq '.worker.image.tag' "$VALUES")
 
-          # Workflow dispatch input takes precedence over the repository secret
-          VITE_RELAY_URL="${INPUT_RELAY_URL:-$SECRET_RELAY_URL}"
-
           echo "server_tag=${SERVER_TAG}"                   >> "$GITHUB_OUTPUT"
           echo "server_upstream_tag=${SERVER_UPSTREAM_TAG}" >> "$GITHUB_OUTPUT"
           echo "relay_tag=${RELAY_TAG}"                     >> "$GITHUB_OUTPUT"
-          echo "worker_tag=${WORKER_TAG}" >> "$GITHUB_OUTPUT"
-          echo "vite_relay_url=${VITE_RELAY_URL}" >> "$GITHUB_OUTPUT"
+          echo "worker_tag=${WORKER_TAG}"                   >> "$GITHUB_OUTPUT"
 
   build-server:
     needs: resolve-tags
@@ -88,7 +80,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           build-args: |
-            VITE_RELAY_API_BASE_URL=${{ needs.resolve-tags.outputs.vite_relay_url }}
+            VITE_RELAY_API_BASE_URL=${{ inputs.vite_relay_url || secrets.VITE_RELAY_API_BASE_URL }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.resolve-tags.outputs.server_tag }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:server-latest
