@@ -257,7 +257,7 @@ worker:
   enabled: true
   image:
     repository: ghcr.io/nwlucas/vibe-kanban
-    tag: "0.1.37"
+    tag: "0.1.36"
     pullPolicy: Always
 
   replicaCount: 1
