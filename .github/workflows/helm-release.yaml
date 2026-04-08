@@ -4,7 +4,12 @@ on:
   push:
     tags:
       - "*"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      vite_relay_url:
+        description: "Override VITE_RELAY_API_BASE_URL (leave empty to use repository secret)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -31,6 +36,9 @@ jobs:
 
       - name: Read tags from values.yaml
         id: tags
+        env:
+          SECRET_RELAY_URL: ${{ secrets.VITE_RELAY_API_BASE_URL }}
+          INPUT_RELAY_URL: ${{ inputs.vite_relay_url }}
         run: |
           VALUES="helm/vibe-kanban/values.yaml"
 
@@ -38,10 +46,13 @@ jobs:
           RELAY_TAG=$(yq '.relay.image.tag' "$VALUES")
           WORKER_TAG=$(yq '.worker.image.tag' "$VALUES")
 
+          # Workflow dispatch input takes precedence over the repository secret
+          VITE_RELAY_URL="${INPUT_RELAY_URL:-$SECRET_RELAY_URL}"
+
           echo "server_tag=${SERVER_TAG}" >> "$GITHUB_OUTPUT"
           echo "relay_tag=${RELAY_TAG}"   >> "$GITHUB_OUTPUT"
           echo "worker_tag=${WORKER_TAG}" >> "$GITHUB_OUTPUT"
-          echo "vite_relay_url=${{ vars.VITE_RELAY_API_BASE_URL }}" >> "$GITHUB_OUTPUT"
+          echo "vite_relay_url=${VITE_RELAY_URL}" >> "$GITHUB_OUTPUT"
 
   build-server:
     needs: resolve-tags
