@@ -108,6 +108,9 @@ spec:
               value: {{ .Values.worker.env.VK_SHARED_RELAY_API_BASE | default ( printf "http://%s.%s.svc.cluster.local:8082" (include "vibe-kanban.relay.fullname" .) .Release.Namespace ) | quote }}
             - name: VK_TUNNEL
               value: "1"
+            {{- with .Values.worker.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.worker.env.PORT | default "3000" }}

@@ -14,6 +14,10 @@ on:
         description: "Docker build platforms (e.g. linux/arm64 for faster builds on ai-hub)"
         required: false
         default: "linux/arm64"
+      chart_only:
+        description: "Skip image builds — publish chart only (true/false)"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -31,6 +35,8 @@ jobs:
       server_upstream_tag: ${{ steps.tags.outputs.server_upstream_tag }}
       relay_tag: ${{ steps.tags.outputs.relay_tag }}
       worker_tag: ${{ steps.tags.outputs.worker_tag }}
+      # True when triggered by a chart-only tag (prefix "chart-") or the chart_only input.
+      skip_images: ${{ steps.skip.outputs.skip_images }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,8 +60,26 @@ jobs:
           echo "relay_tag=${RELAY_TAG}"                     >> "$GITHUB_OUTPUT"
           echo "worker_tag=${WORKER_TAG}"                   >> "$GITHUB_OUTPUT"
 
+      - name: Determine if image builds should be skipped
+        id: skip
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          CHART_ONLY_INPUT: ${{ inputs.chart_only }}
+        run: |
+          SKIP=false
+          # Skip for tags prefixed with "chart-" (e.g. chart-0.0.6)
+          if [[ "$GITHUB_REF_NAME" == chart-* ]]; then
+            SKIP=true
+          fi
+          # Skip when the workflow_dispatch chart_only input is "true"
+          if [[ "$CHART_ONLY_INPUT" == "true" ]]; then
+            SKIP=true
+          fi
+          echo "skip_images=${SKIP}" >> "$GITHUB_OUTPUT"
+
   build-server:
     needs: resolve-tags
+    if: needs.resolve-tags.outputs.skip_images != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Clone upstream vibe-kanban
@@ -91,6 +115,7 @@ jobs:
 
   build-relay:
     needs: resolve-tags
+    if: needs.resolve-tags.outputs.skip_images != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Clone upstream vibe-kanban
@@ -124,6 +149,7 @@ jobs:
 
   build-worker:
     needs: resolve-tags
+    if: needs.resolve-tags.outputs.skip_images != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

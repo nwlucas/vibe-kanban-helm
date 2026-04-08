@@ -376,6 +376,20 @@ worker:
   #       mountPath: /var/log/worker
   extraVolumeMounts: []
 
+  # Extra environment variables injected into the main worker container.
+  # Useful for runtime config that is not covered by worker.env (e.g. ANTHROPIC_BASE_URL).
+  # Each entry follows the standard Kubernetes env var spec.
+  # Example:
+  #   extraEnv:
+  #     - name: ANTHROPIC_BASE_URL
+  #       value: "http://litellm.litellm.svc.cluster.local:4000"
+  #     - name: MY_SECRET
+  #       valueFrom:
+  #         secretKeyRef:
+  #           name: my-secret
+  #           key: my-key
+  extraEnv: []
+
   ingress:
     enabled: false
     className: ""
